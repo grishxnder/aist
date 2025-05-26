@@ -1,0 +1,2 @@
+You are a security analyst. Analyze the following full scan output and describe and potential security issues you find,
+such as open directories, subdomains, interesting response codes, or signs of vulnerabilities.
