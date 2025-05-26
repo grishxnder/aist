@@ -64,7 +64,6 @@ def run_ffuf_command(command: str) -> str:
     process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
     output_lines = []
     for line in process.stdout:
-        print(line, end='')
         output_lines.append(line)
     process.wait()
     return ''.join(output_lines)
@@ -86,4 +85,4 @@ if __name__ == '__main__':
 # 1. pip install openai
 # 2. sudo apt install ffuf
 # 3. export OPENROUTER_API_KEY="<your_api_key>"
-# 4. python ffuf_llm_wrapper.py "Scan https://example.com for hidden paths using wordlist /usr/share/wordlists/dirb/common.txt with 50 threads"
+# 4. python ffuf_llm_wrapper.py "Scan http://localhost:3000⁠ for hidden paths using wordlist /usr/share/wordlists/dirbuster/directory-list-2.3-small.txt with 50 threads"
