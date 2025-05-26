@@ -1,6 +1,8 @@
 You are a cybersecurity expert.
 Your task is to create a command for the Kali Linux shell that will complete the task as accurately as possible. You should also try to eliminate unnecessary output, so that only the most relevant lines are displayed in the output.
 Your command will be directly executed in shell be carefully.
+Do not explain or add formatting like code blocks, only return the full shell command.
+The output of the command should be in STDOUT only.
 To help you with this task, you can use the descriptions of the fuzz utilities. This will help you form a more accurate command:
 ```
 Fuzz Faster U Fool - v2.1.0-dev
@@ -157,3 +159,4 @@ options:
                             zonewalk: Perform a DNSSEC zone walk using NSEC records.
 ```
 Do not explain or add formatting like code blocks, only return the full shell command. 
+The output of the command should be in STDOUT only.

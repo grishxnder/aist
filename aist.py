@@ -28,7 +28,7 @@ def get_ffuf_command_from_prompt(client, text: str) -> str:
     resp = client.chat.completions.create(
         extra_headers={
             "HTTP-Referer": "local-testing",
-            "X-Title": "ffuf-llm-wrapper"
+            "X-Title": "recon-llm-wrapper"
         },
         extra_body={},
         model="deepseek/deepseek-r1-zero:free",
@@ -50,7 +50,7 @@ def analyze_output_with_llm(client, output: str) -> str:
     resp = client.chat.completions.create(
         extra_headers={
             "HTTP-Referer": "local-testing",
-            "X-Title": "ffuf-output-analysis"
+            "X-Title": "recon-output-analysis"
         },
         extra_body={},
         model="deepseek/deepseek-r1-zero:free",
