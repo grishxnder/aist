@@ -142,7 +142,6 @@ def run_ffuf_command(command: str) -> str:
     process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
     output_lines = []
     for line in process.stdout:
-        print(line, end='')
         output_lines.append(line)
     process.wait()
     return ''.join(output_lines)
