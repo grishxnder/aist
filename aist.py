@@ -7,6 +7,7 @@ from openai import OpenAI
 # Load OpenRouter API client for Qwen3-32B (free)
 def load_api_client():
     api_key = os.getenv('OPENROUTER_API_KEY')
+    print(api_key)
     if not api_key:
         raise EnvironmentError('Please set the OPENROUTER_API_KEY environment variable')
     client = OpenAI(
@@ -36,6 +37,7 @@ def parse_user_text_to_params(client, text: str) -> dict:
         messages=messages,
     )
     raw = resp.choices[0].message.content.strip()
+    print(raw)
     try:
         params = json.loads(raw)
     except json.JSONDecodeError:
@@ -57,8 +59,7 @@ def run_ffuf(params: dict):
         cmd += params['extra_args'].split()
     print(f"Running: {' '.join(cmd)}")
     proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
-    for line in proc.stdout:
-        print(line, end='')
+    
     proc.wait()
 
 if __name__ == '__main__':
@@ -72,5 +73,5 @@ if __name__ == '__main__':
 
 # Usage:
 # 1. pip install openai ffuf
-# 2. export OPENROUTER_API_KEY="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"\# 3. Ensure ffuf is installed
-# 4. python ffuf_llm_wrapper.py "Scan https://example.com for directories using wordlist /usr/share/wordlists/dirbuster/directory-list-2.3-small.txt with 50 threads"
+# 2. export OPENROUTER_API_KEY="<your_api_key>"\# 3. Ensure ffuf is installed
+# 4. python ffuf_llm_wrapper.py "Scan https://example.com for directories using wordlist /usr/share/wordlists/common.txt with 50 threads"
