@@ -36,7 +36,6 @@ def parse_user_text_to_params(client, text: str) -> dict:
         messages=messages,
     )
     raw = resp.choices[0].message.content.strip()
-    print(raw)
     try:
         params = json.loads(raw)
     except json.JSONDecodeError:
@@ -58,8 +57,8 @@ def run_ffuf(params: dict):
         cmd += params['extra_args'].split()
     print(f"Running: {' '.join(cmd)}")
     proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
-    #for line in proc.stdout:
-        #print(line, end='')
+    for line in proc.stdout:
+        print(line, end='')
     proc.wait()
 
 if __name__ == '__main__':
