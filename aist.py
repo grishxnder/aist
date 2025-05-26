@@ -17,6 +17,7 @@ def load_api_client():
 
 # Get ffuf command directly from LLM
 def get_ffuf_command_from_prompt(client, text: str) -> str:
+    system_prompt = ''
     with open('recon_run.txt', 'r') as file:
         for line in file.readlines():
             system_prompt += line
@@ -38,6 +39,7 @@ def get_ffuf_command_from_prompt(client, text: str) -> str:
 
 # Analyze ffuf output using LLM
 def analyze_output_with_llm(client, output: str) -> str:
+    analysis_prompt = ''
     with open('recon_analysis.txt', 'r') as file:
         for line in file.readlines():
             analysis_prompt += line
