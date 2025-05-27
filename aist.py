@@ -15,52 +15,41 @@ def load_api_client():
     )
     return client
 
-def get_ffuf_command_from_prompt(client, text: str) -> str:
+# Generate ffuf command using LLM
+def generate_ffuf_command(client, description: str, previous_error: str = "") -> str:
     system_prompt = ""
     with open('recon_run.txt', 'r') as file:
         system_prompt += file.read()
 
-    def generate_command(err = ''):
-        messages = [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": text}
-        ]
-        resp = client.chat.completions.create(
-            extra_headers={
-                "HTTP-Referer": "local-testing",
-                "X-Title": "ffuf-llm-wrapper"
-            },
-            extra_body={},
-            model="deepseek/deepseek-r1-zero:free",
-            messages=messages,
-        )
-        return resp.choices[0].message.content.strip()
+    user_prompt = description
+    if previous_error:
+        user_prompt += f"\n\nNote: The previous command failed with the following error:\n{previous_error}\nPlease correct it."
 
-    
-    for attempt in range(3):
-        if attempt != 0:
-            command = generate_command(f'You have to fix some error: {output_text}')
-        else:
-            command = generate_command()
-        print(f"\n Attempt {attempt+1}: Testing command -> {command}")
-        
-        process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
-        output_lines = []
-        for line in process.stdout:
-            print(line, end='')
-            output_lines.append(line)
-        process.wait()
-        
-        output_text = ''.join(output_lines)
-        return_code = process.returncode
+    messages = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": user_prompt}
+    ]
+    resp = client.chat.completions.create(
+        extra_headers={
+            "HTTP-Referer": "local-testing",
+            "X-Title": "ffuf-llm-wrapper"
+        },
+        extra_body={},
+        model="deepseek/deepseek-r1-zero:free",
+        messages=messages,
+    )
+    return resp.choices[0].message.content.strip()
 
-        if return_code != 0 or len(output_text.split()) > 5000:
-            print("⚠️ Error detected or output too long. Asking LLM to regenerate command...\n")
-            continue
 
-        return command
+# Run ffuf command and return output, error output, and return code
+def run_ffuf_command(command: str):
+    print(f"Running: {command}")
+    process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    stdout, stderr = process.communicate()
+    for line in stdout.splitlines():
+        print(line)
+    return stdout, stderr, process.returncode
 
-    raise RuntimeError("Failed to generate a valid ffuf command after multiple attempts.")
 
 # Analyze ffuf output using LLM
 def analyze_output_with_llm(client, output: str) -> str:
@@ -82,25 +71,36 @@ def analyze_output_with_llm(client, output: str) -> str:
     )
     return resp.choices[0].message.content.strip()
 
-# Run ffuf command and return output
-def run_ffuf_command(command: str) -> str:
-    print(f"Running: {command}")
-    process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
-    output_lines = []
-    for line in process.stdout:
-        print(line, end='')
-        output_lines.append(line)
-    process.wait()
-    return ''.join(output_lines)
-
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Run ffuf using LLM-generated command and analyze output.')
     parser.add_argument('description', help='Natural language description of the fuzzing task')
     args = parser.parse_args()
 
     client = load_api_client()
-    ffuf_command = get_ffuf_command_from_prompt(client, args.description)
-    ffuf_output = run_ffuf_command(ffuf_command)
+
+    MAX_WORDS = 5000
+    last_error = ""
+    ffuf_output = ""
+    ffuf_command = ""
+
+    for attempt in range(3):
+        ffuf_command = generate_ffuf_command(client, args.description, last_error)
+        ffuf_output, ffuf_stderr, returncode = run_ffuf_command(ffuf_command)
+        word_count = len(ffuf_output.split())
+
+        if returncode != 0:
+            last_error = ffuf_stderr.strip() or "command output returned a non-zero exit code with no additional error message."
+            print(f"❌ Command execution failed (code {returncode}):\n{last_error}\n")
+            continue
+        elif word_count > MAX_WORDS:
+            last_error = f"Output too long ({word_count} words). Limit is {MAX_WORDS}."
+            print(f"⚠️ Output too verbose. Retrying...\n")
+            continue
+        else:
+            break
+    else:
+        raise RuntimeError("Failed to generate and execute a valid ffuf command after multiple attempts.")
+
     analysis = analyze_output_with_llm(client, ffuf_output)
 
     print("\n--- LLM Analysis of ffuf Output ---")
