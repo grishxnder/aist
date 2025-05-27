@@ -36,7 +36,7 @@ def generate_ffuf_command(client, description: str, previous_error: str = "") ->
             "X-Title": "ffuf-llm-wrapper"
         },
         extra_body={},
-        model="qwen/qwen3-32b:free",
+        model="deepseek/deepseek-r1-distill-llama-70b:free",
         messages=messages,
     )
     return resp.choices[0].message.content.strip()
@@ -71,7 +71,7 @@ def analyze_output_with_llm(client, output: str) -> str:
             "X-Title": "ffuf-output-analysis"
         },
         extra_body={},
-        model="qwen/qwen3-32b:free",
+        model="deepseek/deepseek-r1-distill-llama-70b:free",
         messages=messages,
     )
     return resp.choices[0].message.content.strip()
