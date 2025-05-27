@@ -2,7 +2,17 @@ import os
 import subprocess
 import json
 import argparse
+import sqlite3
+import pickle
+import faiss
+import numpy as np
 from openai import OpenAI
+
+# === Configuration for RAG ===
+DB_PATH = 'examples.db'
+FAISS_INDEX_PATH = 'examples.index'
+EMBEDDING_MODEL = 'openai-embedding-3-small'
+TOP_K = 3
 
 # Load OpenRouter API client for Qwen3-32B (free)
 def load_api_client():
@@ -15,26 +25,65 @@ def load_api_client():
     )
     return client
 
-# Generate ffuf command using LLM
-def generate_ffuf_command(client, description: str, previous_error: str = "") -> str:
-    print("Generating started")
-    system_prompt = ""
-    with open('recon_run.txt', 'r') as file:
-        system_prompt += file.read()
 
-    user_prompt = description
+# Compute embedding for a text via OpenRouter/OpenAI
+def get_embedding(client, text: str) -> list:
+    resp = client.embeddings.create(model=EMBEDDING_MODEL, input=text)
+    return resp.data[0].embedding
+
+
+# Initialize or load FAISS index and example metadata
+def load_rag_resources():
+    conn = sqlite3.connect(DB_PATH)
+    cur = conn.cursor()
+    # ensure table exists
+    cur.execute(
+        'CREATE TABLE IF NOT EXISTS examples (id INTEGER PRIMARY KEY, description TEXT, command TEXT, embedding BLOB)'
+    )
+    rows = cur.execute('SELECT id, embedding FROM examples').fetchall()
+    if not rows:
+        raise RuntimeError('No examples in database for RAG retrieval')
+    ids, embeddings = zip(*rows)
+    embeddings = np.array([pickle.loads(e) for e in embeddings], dtype='float32')
+    d = embeddings.shape[1]
+    index = faiss.IndexFlatL2(d)
+    index.add(embeddings)
+    return conn, index, list(ids)
+
+
+# Retrieve top-k similar examples from the RAG store
+def retrieve_similar_examples(client, index, ids, description: str, k=TOP_K):
+    q_emb = np.array([get_embedding(client, description)], dtype='float32')
+    D, I = index.search(q_emb, k)
+    conn = sqlite3.connect(DB_PATH)
+    cur = conn.cursor()
+    examples = []
+    for idx in I[0]:
+        row = cur.execute('SELECT description, command FROM examples WHERE id=?', (ids[idx],)).fetchone()
+        examples.append({'desc': row[0], 'cmd': row[1]})
+    conn.close()
+    return examples
+
+# Generate ffuf command using LLM with RAG context
+def generate_ffuf_command(client, description: str, index, ids, previous_error: str = "") -> str:
+    # Load system prompt
+    system_prompt = open('recon_run.txt').read()
+    # Retrieve examples via RAG
+    examples = retrieve_similar_examples(client, index, ids, description)
+    rag_context = "".join(
+        f"Example Description: {ex['desc']}\nExample Command: {ex['cmd']}\n---\n" for ex in examples
+    )
+    # Build user prompt
+    user_prompt = f"{rag_context}\nTask: {description}"
     if previous_error:
-        user_prompt += f"\n\nNote: The previous command failed with the following error:\n \nPlease correct it."
+        user_prompt += f"\nPrevious error: {previous_error}"
 
     messages = [
         {"role": "system", "content": system_prompt},
-        {"role": "user", "content": user_prompt}
+        {"role": "user",   "content": user_prompt}
     ]
     resp = client.chat.completions.create(
-        extra_headers={
-            "HTTP-Referer": "local-testing",
-            "X-Title": "ffuf-llm-wrapper"
-        },
+        extra_headers={"HTTP-Referer": "local-testing", "X-Title": "ffuf-llm-wrapper"},
         extra_body={},
         model="deepseek/deepseek-r1-distill-llama-70b:free",
         messages=messages,
