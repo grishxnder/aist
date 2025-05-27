@@ -43,15 +43,31 @@ def generate_ffuf_command(client, description: str, previous_error: str = "") ->
 
  
 # Run ffuf command and return output, error output, and return code
-def run_ffuf_command(command: str):
+def run_ffuf_command(command: str, timeout: int = 30):
     print(f"Running: {command}")
-    process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-    stdout, stderr = process.communicate()
-    if stderr:
+    try:
+        process = subprocess.Popen(
+            command,
+            shell=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True
+        )
+        stdout, stderr = process.communicate(timeout=timeout)
+    except subprocess.TimeoutExpired:
+        process.kill()
+        stdout, stderr = process.communicate()
+        stderr += "\nCommand timed out after {} seconds.".format(timeout)
+        return stdout, stderr, 1
+    except Exception as e:
+        return "", str(e), 1
+
+    if process.returncode != 0:
         return stdout, stderr, process.returncode
-    
+
     for line in stdout.splitlines():
         print(line)
+
     return stdout, stderr, process.returncode
 
 
