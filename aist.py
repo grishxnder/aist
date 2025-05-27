@@ -24,7 +24,7 @@ def generate_ffuf_command(client, description: str, previous_error: str = "") ->
 
     user_prompt = description
     if previous_error:
-        user_prompt += f"\n\nNote: The previous command failed with the following error:\n{  }\nPlease correct it."
+        user_prompt += f"\n\nNote: The previous command failed with the following error:\n \nPlease correct it."
 
     messages = [
         {"role": "system", "content": system_prompt},
