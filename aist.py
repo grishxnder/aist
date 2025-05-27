@@ -58,7 +58,7 @@ def run_ffuf_command(command: str):
 # Analyze ffuf output using LLM
 def analyze_output_with_llm(client, output: str) -> str:
     print("Analysis started")
-    system_prompt = ""
+    analysis_prompt = ""
     with open('recon_analysis.txt', 'r') as file:
         analysis_prompt += file.read()
     messages = [
