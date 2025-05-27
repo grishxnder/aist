@@ -17,13 +17,14 @@ def load_api_client():
 
 # Generate ffuf command using LLM
 def generate_ffuf_command(client, description: str, previous_error: str = "") -> str:
+    print("Generating started")
     system_prompt = ""
     with open('recon_run.txt', 'r') as file:
         system_prompt += file.read()
 
     user_prompt = description
     if previous_error:
-        user_prompt += f"\n\nNote: The previous command failed with the following error:\n{previous_error}\nPlease correct it."
+        user_prompt += f"\n\nNote: The previous command failed with the following error:\n{  }\nPlease correct it."
 
     messages = [
         {"role": "system", "content": system_prompt},
@@ -40,7 +41,7 @@ def generate_ffuf_command(client, description: str, previous_error: str = "") ->
     )
     return resp.choices[0].message.content.strip()
 
-
+ 
 # Run ffuf command and return output, error output, and return code
 def run_ffuf_command(command: str):
     print(f"Running: {command}")
@@ -53,6 +54,7 @@ def run_ffuf_command(command: str):
 
 # Analyze ffuf output using LLM
 def analyze_output_with_llm(client, output: str) -> str:
+    print("Analysis started")
     system_prompt = ""
     with open('recon_analysis.txt', 'r') as file:
         analysis_prompt += file.read()
