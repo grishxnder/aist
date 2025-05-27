@@ -36,7 +36,7 @@ def generate_ffuf_command(client, description: str, previous_error: str = "") ->
             "X-Title": "ffuf-llm-wrapper"
         },
         extra_body={},
-        model="deepseek/deepseek-r1-zero:free",
+        model="qwen/qwen3-32b:free",
         messages=messages,
     )
     return resp.choices[0].message.content.strip()
@@ -47,6 +47,9 @@ def run_ffuf_command(command: str):
     print(f"Running: {command}")
     process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     stdout, stderr = process.communicate()
+    if stderr:
+        return stdout, stderr, process.returncode
+    
     for line in stdout.splitlines():
         print(line)
     return stdout, stderr, process.returncode
@@ -68,7 +71,7 @@ def analyze_output_with_llm(client, output: str) -> str:
             "X-Title": "ffuf-output-analysis"
         },
         extra_body={},
-        model="deepseek/deepseek-r1-zero:free",
+        model="qwen/qwen3-32b:free",
         messages=messages,
     )
     return resp.choices[0].message.content.strip()
