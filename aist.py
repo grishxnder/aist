@@ -30,6 +30,7 @@ def load_api_client():
 def get_embedding(client, text: str) -> list:
     resp = client.embeddings.create(model=EMBEDDING_MODEL, input=text)
     return resp.data[0].embedding
+# Generate ffuf command using LLM
 
 
 # Initialize or load FAISS index and example metadata
@@ -64,26 +65,26 @@ def retrieve_similar_examples(client, index, ids, description: str, k=TOP_K):
     conn.close()
     return examples
 
-# Generate ffuf command using LLM with RAG context
-def generate_ffuf_command(client, description: str, index, ids, previous_error: str = "") -> str:
-    # Load system prompt
-    system_prompt = open('recon_run.txt').read()
-    # Retrieve examples via RAG
-    examples = retrieve_similar_examples(client, index, ids, description)
-    rag_context = "".join(
-        f"Example Description: {ex['desc']}\nExample Command: {ex['cmd']}\n---\n" for ex in examples
-    )
-    # Build user prompt
-    user_prompt = f"{rag_context}\nTask: {description}"
+
+def generate_ffuf_command(client, description: str, previous_error: str = "") -> str:
+    print("Generating started")
+    system_prompt = ""
+    with open('recon_run.txt', 'r') as file:
+        system_prompt += file.read()
+
+    user_prompt = description
     if previous_error:
-        user_prompt += f"\nPrevious error: {previous_error}"
+        user_prompt += f"\n\nNote: The previous command failed with the following error:\n \nPlease correct it."
 
     messages = [
         {"role": "system", "content": system_prompt},
-        {"role": "user",   "content": user_prompt}
+        {"role": "user", "content": user_prompt}
     ]
     resp = client.chat.completions.create(
-        extra_headers={"HTTP-Referer": "local-testing", "X-Title": "ffuf-llm-wrapper"},
+        extra_headers={
+            "HTTP-Referer": "local-testing",
+            "X-Title": "ffuf-llm-wrapper"
+        },
         extra_body={},
         model="deepseek/deepseek-r1-distill-llama-70b:free",
         messages=messages,
@@ -147,14 +148,14 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     client = load_api_client()
-
+    conn, index, ids = load_rag_resources()
     MAX_WORDS = 5000
     last_error = ""
     ffuf_output = ""
     ffuf_command = ""
 
     for attempt in range(3):
-        ffuf_command = generate_ffuf_command(client, args.description, last_error)
+        ffuf_command = generate_ffuf_command(client, args.description, index, ids, last_error)
         ffuf_output, ffuf_stderr, returncode = run_ffuf_command(ffuf_command)
         word_count = len(ffuf_output.split())
 
