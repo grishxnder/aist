@@ -5,7 +5,7 @@ import os
 from openai import OpenAI
 
 DB_PATH = 'examples.db'
-EMBEDDING_MODEL = 'openai-embedding-3-small'
+EMBEDDING_MODEL = 'text-embedding-3-small'
 
 desc = input("Enter description: ")
 cmd = input("Enter ffuf command: ")
