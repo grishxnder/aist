@@ -11,7 +11,10 @@ desc = input("Enter description: ")
 cmd = input("Enter ffuf command: ")
 
 api_key = os.getenv("OPENROUTER_API_KEY")
-client = OpenAI(api_key=api_key)
+client = OpenAI(
+        base_url="https://openrouter.ai/api/v1",
+        api_key=api_key,
+    )
 
 embedding = client.embeddings.create(model=EMBEDDING_MODEL, input=desc).data[0].embedding
 emb_blob = pickle.dumps(np.array(embedding, dtype='float32'))
